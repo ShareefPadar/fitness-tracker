@@ -24,9 +24,6 @@ export const Auth: React.FC<AuthProps> = ({ onGuestLogin }) => {
 
     if (error) {
       setError(error.message);
-    } else {
-      // Successful login will automatically cause the App.tsx to rerender with a session
-      window.location.reload();
     }
     setLoading(false);
   };

@@ -52,35 +52,43 @@ guestDb.version(2).stores({
 
 // Helper to seed guest data if empty
 export const seedGuestData = async () => {
-  const count = await guestDb.entries.count();
-  if (count > 0) return;
+  try {
+    const count = await guestDb.entries.count();
+    if (count > 0) return;
 
-  const sampleEntries: Entry[] = [
-    { id: 's1', date: '2024-03-01', weight_kg: 82.5, body_fat_pct: 22.1, notes: 'Starting journey', created_at: Date.now() },
-    { id: 's2', date: '2024-03-05', weight_kg: 81.8, body_fat_pct: 21.8, created_at: Date.now() },
-    { id: 's3', date: '2024-03-12', weight_kg: 81.2, body_fat_pct: 21.5, notes: 'Feeling lighter', created_at: Date.now() },
-    { id: 's4', date: '2024-03-18', weight_kg: 80.5, body_fat_pct: 21.2, created_at: Date.now() },
-    { id: 's5', date: '2024-03-24', weight_kg: 79.8, body_fat_pct: 20.9, notes: 'Consistent work pays off', created_at: Date.now() },
-  ];
+    const sampleEntries: Entry[] = [
+      { id: 's1', date: '2024-03-01', weight_kg: 82.5, body_fat_pct: 22.1, notes: 'Starting journey', created_at: Date.now() },
+      { id: 's2', date: '2024-03-05', weight_kg: 81.8, body_fat_pct: 21.8, created_at: Date.now() },
+      { id: 's3', date: '2024-03-12', weight_kg: 81.2, body_fat_pct: 21.5, notes: 'Feeling lighter', created_at: Date.now() },
+      { id: 's4', date: '2024-03-18', weight_kg: 80.5, body_fat_pct: 21.2, created_at: Date.now() },
+      { id: 's5', date: '2024-03-24', weight_kg: 79.8, body_fat_pct: 20.9, notes: 'Consistent work pays off', created_at: Date.now() },
+    ];
 
-  const sampleMeasures: Measurement[] = [
-    { id: 'm1', date: '2024-03-01', waist_cm: 94, chest_cm: 102, hips_cm: 105, arms_cm: 34 },
-    { id: 'm2', date: '2024-03-24', waist_cm: 91, chest_cm: 101, hips_cm: 103, arms_cm: 35 },
-  ];
+    const sampleMeasures: Measurement[] = [
+      { id: 'm1', date: '2024-03-01', waist_cm: 94, chest_cm: 102, hips_cm: 105, arms_cm: 34 },
+      { id: 'm2', date: '2024-03-24', waist_cm: 91, chest_cm: 101, hips_cm: 103, arms_cm: 35 },
+    ];
 
-  await guestDb.entries.bulkAdd(sampleEntries);
-  await guestDb.measurements.bulkAdd(sampleMeasures);
-  await guestDb.settings.put({ id: 1, height_cm: 168, goal_weight_kg: 65 });
+    await guestDb.entries.bulkPut(sampleEntries);
+    await guestDb.measurements.bulkPut(sampleMeasures);
+    await guestDb.settings.put({ id: 1, height_cm: 168, goal_weight_kg: 65 });
+  } catch (err) {
+    console.error('Guest Seeding Error:', err);
+  }
 };
 
 export const seedCheppuData = async () => {
-  const count = await db.entries.count();
-  // Always ensure settings are there
-  await db.settings.put({ id: 1, height_cm: 168, goal_weight_kg: 65 });
+  try {
+    const count = await db.entries.count();
+    // Always ensure settings are there
+    await db.settings.put({ id: 1, height_cm: 168, goal_weight_kg: 65 });
 
-  // Only import if database is empty to prevent duplicates
-  if (count > 0) return;
-  
-  const { cheppuSeedData } = await import('./cheppuSeedData');
-  await db.entries.bulkAdd(cheppuSeedData);
+    // Only import if database is empty to prevent duplicates
+    if (count > 0) return;
+    
+    const { cheppuSeedData } = await import('./cheppuSeedData');
+    await db.entries.bulkPut(cheppuSeedData);
+  } catch (err) {
+    console.error('Cheppu Seeding Error:', err);
+  }
 };

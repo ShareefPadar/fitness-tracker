@@ -11,18 +11,28 @@ interface DatabaseContextType {
 const DatabaseContext = createContext<DatabaseContextType | undefined>(undefined);
 
 export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeRole, setActiveRole] = useState(localStorage.getItem('demo_role') || 'guest');
+  const [activeRole, setActiveRole] = useState(() => {
+    // If we have a supabase session cookie/token, we might not be a guest
+    const role = localStorage.getItem('demo_role');
+    return role || 'guest';
+  });
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserEmail(user.email || null);
-        setActiveRole('cheppu');
-      } else {
-        setUserEmail(null);
-        setActiveRole(localStorage.getItem('demo_role') || 'guest');
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserEmail(user.email || null);
+          setActiveRole('cheppu');
+        } else {
+          setUserEmail(null);
+          // Only explicit 'guest' if no user
+          const savedRole = localStorage.getItem('demo_role');
+          setActiveRole(savedRole || 'guest');
+        }
+      } catch (err) {
+        console.error('Context Auth Check Error:', err);
       }
     };
     checkUser();
