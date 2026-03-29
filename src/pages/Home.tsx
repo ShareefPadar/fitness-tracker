@@ -10,8 +10,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 export const Home: React.FC = () => {
   const { activeDb, isGuest } = useDatabase();
-  const entries = useLiveQuery(() => activeDb.entries.orderBy('date').reverse().toArray());
-  const settings = useLiveQuery(() => activeDb.settings.get(1));
+  const entries = useLiveQuery(() => activeDb.entries.orderBy('date').reverse().toArray(), [activeDb]);
+  const settings = useLiveQuery(() => activeDb.settings.get(1), [activeDb]);
   const [isLogOpen, setLogOpen] = useState(false);
   const [period, setPeriod] = useState('All');
 

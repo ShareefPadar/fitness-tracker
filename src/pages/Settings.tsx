@@ -7,7 +7,7 @@ import { supabase } from '../supabase';
 
 export const Settings: React.FC = () => {
   const { activeDb, isGuest, userEmail } = useDatabase();
-  const settings = useLiveQuery(() => activeDb.settings.get(1));
+  const settings = useLiveQuery(() => activeDb.settings.get(1), [activeDb]);
 
   const [height, setHeight] = useState<string>('');
   const [goal, setGoal] = useState<string>('');

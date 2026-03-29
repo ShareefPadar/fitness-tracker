@@ -7,7 +7,7 @@ import { Ruler } from 'lucide-react';
 
 export const Measurements: React.FC = () => {
   const { activeDb } = useDatabase();
-  const measurements = useLiveQuery(() => activeDb.measurements.orderBy('date').reverse().toArray());
+  const measurements = useLiveQuery(() => activeDb.measurements.orderBy('date').reverse().toArray(), [activeDb]);
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [waist, setWaist] = useState('');
   const [chest, setChest] = useState('');

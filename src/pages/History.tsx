@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 export const History: React.FC = () => {
   const { activeDb } = useDatabase();
-  const entries = useLiveQuery(() => activeDb.entries.orderBy('date').reverse().toArray());
+  const entries = useLiveQuery(() => activeDb.entries.orderBy('date').reverse().toArray(), [activeDb]);
   const navigate = useNavigate();
 
   const handleDelete = async (id: string) => {

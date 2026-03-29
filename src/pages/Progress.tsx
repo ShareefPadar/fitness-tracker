@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 
 export const Progress: React.FC = () => {
   const { activeDb } = useDatabase();
-  const entries = useLiveQuery(() => activeDb.entries.toArray());
+  const entries = useLiveQuery(() => activeDb.entries.toArray(), [activeDb]);
   const entryCount = entries?.length || 0;
 
   return (
