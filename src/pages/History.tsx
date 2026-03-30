@@ -3,15 +3,19 @@ import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDatabase } from '../context/DatabaseContext';
 import { useNavigate } from 'react-router-dom';
+import { BottomSheet } from '../components/BottomSheet';
 
 export const History: React.FC = () => {
   const { activeDb } = useDatabase();
   const entries = useLiveQuery(() => activeDb.entries.orderBy('date').reverse().toArray(), [activeDb]);
   const navigate = useNavigate();
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Delete this entry?')) {
-      await activeDb.entries.delete(id);
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+
+  const confirmDelete = async () => {
+    if (deleteId) {
+      await activeDb.entries.delete(deleteId);
+      setDeleteId(null);
     }
   };
 
@@ -37,7 +41,7 @@ export const History: React.FC = () => {
                 {e.notes && <p style={{ fontStyle: 'italic', marginTop: '4px' }}>"{e.notes}"</p>}
               </div>
             </div>
-            <button className="btn-ghost" onClick={() => handleDelete(e.id)} style={{ border: 'none', color: 'var(--danger)' }}>
+            <button className="btn-ghost" onClick={() => setDeleteId(e.id)} style={{ border: 'none', color: 'var(--danger)' }}>
               <Trash2 size={20} />
             </button>
           </div>
@@ -48,6 +52,31 @@ export const History: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Custom Delete Confirmation Modal */}
+      <BottomSheet isOpen={!!deleteId} onClose={() => setDeleteId(null)} title="Delete Log">
+        <div style={{ padding: '8px 0', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
+            Are you sure you want to permanently delete this entry?
+          </p>
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <button 
+              className="btn btn-secondary" 
+              style={{ flex: 1, borderColor: 'var(--glass-border)' }} 
+              onClick={() => setDeleteId(null)}
+            >
+              Cancel
+            </button>
+            <button 
+              className="btn btn-primary" 
+              style={{ flex: 1, background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', boxShadow: 'none' }} 
+              onClick={confirmDelete}
+            >
+              <Trash2 size={18} /> Delete
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   );
 };

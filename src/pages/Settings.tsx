@@ -15,6 +15,12 @@ export const Settings: React.FC = () => {
   const [gender, setGender] = useState<'Male'|'Female'|''>('');
   const [fitnessGoal, setFitnessGoal] = useState<'Fat Loss'|'Muscle Gain'|'Maintain'|''>('');
   const [activityLevel, setActivityLevel] = useState<'sedentary'|'lightly_active'|'moderately_active'|'very_active'|''>('');
+  const [toast, setToast] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+
+  const showToast = (text: string, type: 'success' | 'error') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   React.useEffect(() => {
     if (settings) {
@@ -38,12 +44,15 @@ export const Settings: React.FC = () => {
       fitness_goal: fitnessGoal ? fitnessGoal : undefined,
       activity_level: activityLevel ? activityLevel : undefined
     });
-    alert('Profile updated!');
+    showToast('Profile saved successfully!', 'success');
   };
 
   const exportCsv = async () => {
     const entries = await activeDb.entries.toArray();
-    if (!entries.length) return alert('No data to export.');
+    if (!entries.length) {
+      showToast('No log data to export yet.', 'error');
+      return;
+    }
     
     const csv = Papa.unparse(entries.map(e => ({
       Date: e.date,
@@ -132,7 +141,22 @@ export const Settings: React.FC = () => {
           </select>
         </div>
 
-        <button className="btn btn-primary" style={{ marginTop: '24px', width: '100%' }} onClick={handleSaveProfile}>
+        {toast && (
+          <div className="animate-fade-in" style={{ 
+            marginTop: '16px', 
+            padding: '12px', 
+            borderRadius: '8px', 
+            background: toast.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+            border: `1px solid ${toast.type === 'success' ? 'var(--success)' : 'var(--danger)'}`,
+            color: toast.type === 'success' ? 'var(--success)' : 'var(--danger)',
+            fontSize: '0.875rem',
+            textAlign: 'center'
+          }}>
+            {toast.text}
+          </div>
+        )}
+
+        <button className="btn btn-primary" style={{ marginTop: toast ? '12px' : '24px', width: '100%' }} onClick={handleSaveProfile}>
           Save Profile
         </button>
       </div>
