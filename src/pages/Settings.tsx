@@ -106,7 +106,7 @@ export const Settings: React.FC = () => {
           </div>
           <div>
             <label className="input-label">Gender</label>
-            <select className="input-field" value={gender} onChange={e => setGender(e.target.value as any)}>
+            <select className="input-field" value={gender} onChange={e => setGender(e.target.value as 'Male' | 'Female' | '')}>
               <option value="">Select...</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
@@ -121,7 +121,7 @@ export const Settings: React.FC = () => {
           </div>
           <div>
             <label className="input-label">Fitness Goal</label>
-            <select className="input-field" value={fitnessGoal} onChange={e => setFitnessGoal(e.target.value as any)}>
+            <select className="input-field" value={fitnessGoal} onChange={e => setFitnessGoal(e.target.value as 'Fat Loss' | 'Muscle Gain' | 'Maintain' | '')}>
               <option value="">Select...</option>
               <option value="Fat Loss">Fat Loss</option>
               <option value="Muscle Gain">Muscle Gain</option>
@@ -132,7 +132,7 @@ export const Settings: React.FC = () => {
         
         <div className="input-group text-left mt-4">
           <label className="input-label">Activity Level</label>
-          <select className="input-field" value={activityLevel} onChange={e => setActivityLevel(e.target.value as any)}>
+          <select className="input-field" value={activityLevel} onChange={e => setActivityLevel(e.target.value as 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | '')}>
             <option value="">Select...</option>
             <option value="sedentary">Sedentary (Desk job, little exercise)</option>
             <option value="lightly_active">Lightly active (1-3 days/week)</option>

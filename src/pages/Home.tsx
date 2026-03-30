@@ -59,7 +59,7 @@ export const Home: React.FC = () => {
     if (comparison && comparison.id !== current.id) {
       const diff = current.weight_kg - comparison.weight_kg;
       const daysDiff = Math.max(1, Math.round((parseISO(current.date).getTime() - parseISO(comparison.date).getTime()) / (1000 * 60 * 60 * 24)));
-      let label = daysDiff >= 7 ? 'this wk' : `${daysDiff}d`;
+      const label = daysDiff >= 7 ? 'this wk' : `${daysDiff}d`;
 
       if (daysDiff < 5) {
         paceBadge = { text: `Need more data`, color: 'var(--text-secondary)', icon: '•' };

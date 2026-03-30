@@ -11,7 +11,7 @@ import { Auth } from './pages/Auth';
 import { DatabaseProvider } from './context/DatabaseContext';
 
 function App() {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<unknown>(null);
   const [role, setRole] = useState<string | null>(localStorage.getItem('demo_role'));
   const [loading, setLoading] = useState(true);
 
