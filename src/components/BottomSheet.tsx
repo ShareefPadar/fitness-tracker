@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -20,7 +21,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
     };
   }, [isOpen]);
 
-  return (
+  // Don't render until client side is active (to ensure document.body exists)
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div 
       className={`bottom-sheet-overlay ${isOpen ? 'open' : ''}`}
       onClick={(e) => {
@@ -36,6 +40,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
