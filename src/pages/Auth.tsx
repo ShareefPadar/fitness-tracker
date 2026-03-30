@@ -89,10 +89,10 @@ export const Auth: React.FC<AuthProps> = ({ onGuestLogin }) => {
             onGuestLogin();
           }}
         >
-          <UserCircle size={18} /> Recruiters: Continue as Guest
+          <UserCircle size={18} /> View Demo
         </button>
         <p style={{ marginTop: '16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          Guest mode is for demo only. Data logged in guest mode will expire.
+          Explore a fully populated sample account. Any changes made will not be saved permanently.
         </p>
       </div>
     </div>
