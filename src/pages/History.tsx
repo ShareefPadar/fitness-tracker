@@ -33,7 +33,7 @@ export const History: React.FC = () => {
             <div>
               <p style={{ fontWeight: 600 }}>{e.date}</p>
               <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                {e.weight_kg}kg {e.body_fat_pct ? ` • ${e.body_fat_pct}% BF` : ''} 
+                {e.weight_kg}kg
                 {e.notes && <p style={{ fontStyle: 'italic', marginTop: '4px' }}>"{e.notes}"</p>}
               </div>
             </div>

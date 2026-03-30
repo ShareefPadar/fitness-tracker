@@ -34,7 +34,11 @@ create policy "Users can update their own entries"
 create table if not exists settings (
   user_id uuid references auth.users(id) on delete cascade primary key,
   height_cm float8 not null default 175,
-  goal_weight_kg float8 not null default 70
+  goal_weight_kg float8 not null default 70,
+  age int,
+  gender text,
+  fitness_goal text,
+  activity_level text
 );
 
 -- Enable RLS for settings

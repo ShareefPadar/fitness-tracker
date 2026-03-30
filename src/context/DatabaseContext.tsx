@@ -63,7 +63,11 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await supabase.from('settings').upsert({
           user_id: user.id,
           height_cm: localSettings.height_cm,
-          goal_weight_kg: localSettings.goal_weight_kg
+          goal_weight_kg: localSettings.goal_weight_kg,
+          age: localSettings.age,
+          gender: localSettings.gender,
+          fitness_goal: localSettings.fitness_goal,
+          activity_level: localSettings.activity_level
         });
       }
 

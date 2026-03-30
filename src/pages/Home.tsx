@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDatabase } from '../context/DatabaseContext';
 import { BottomSheet } from '../components/BottomSheet';
-import { Plus, Weight, Activity, Flame, Share2, Target } from 'lucide-react';
+import { Plus, Weight, Activity, Share2, Target } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { v4 as uuidv4 } from 'uuid';
 import { format, parseISO, subMonths, subYears, isAfter } from 'date-fns';
@@ -18,11 +19,9 @@ export const Home: React.FC = () => {
   // Form State
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [weightStr, setWeightStr] = useState('');
-  const [bfStr, setBfStr] = useState('');
   const [notes, setNotes] = useState('');
 
   const currentWeight = entries?.length ? entries[0].weight_kg : null;
-  const currentBF = entries?.length ? entries[0].body_fat_pct : null;
   const height_cm = settings?.height_cm || 175; 
   const bmiNum = currentWeight ? (currentWeight / Math.pow(height_cm / 100, 2)) : null;
   const bmi = bmiNum ? bmiNum.toFixed(1) : null;
@@ -62,7 +61,9 @@ export const Home: React.FC = () => {
       const daysDiff = Math.max(1, Math.round((parseISO(current.date).getTime() - parseISO(comparison.date).getTime()) / (1000 * 60 * 60 * 24)));
       let label = daysDiff >= 7 ? 'this wk' : `${daysDiff}d`;
 
-      if (Math.abs(diff) < 0.1) {
+      if (daysDiff < 5) {
+        paceBadge = { text: `Need more data`, color: 'var(--text-secondary)', icon: '•' };
+      } else if (Math.abs(diff) < 0.1) {
         paceBadge = { text: `Stable`, color: 'var(--warning)', icon: '•' };
       } else if (diff < 0) {
         paceBadge = { text: `${Math.abs(diff).toFixed(1)}kg ${label}`, color: 'var(--success)', icon: '↓' };
@@ -78,62 +79,137 @@ export const Home: React.FC = () => {
 
   // --- Forecast Logic ---
   let forecastView = null;
-  if (entries && entries.length > 1 && goalWeight && currentWeight) {
+  if (entries && entries.length > 0 && goalWeight && currentWeight) {
     const sorted = [...entries].sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
     const current = sorted[0];
-    
-    // Calculate rate over last ~30 days for more realistic long-term forecast
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    let comparison = sorted.find(e => parseISO(e.date).getTime() <= thirtyDaysAgo.getTime());
-    if (!comparison) comparison = sorted[sorted.length - 1]; 
-    
-    if (comparison && comparison.id !== current.id) {
-       const weightDiff = current.weight_kg - comparison.weight_kg;
-       const daysDiff = Math.max(1, Math.round((parseISO(current.date).getTime() - parseISO(comparison.date).getTime()) / (1000 * 60 * 60 * 24)));
-       
-       const dailyRate = weightDiff / daysDiff;
-       const weeklyRate = dailyRate * 7;
-       
-       const distanceToGoal = currentWeight - goalWeight;
-       const isLosingWeight = dailyRate < 0;
-       const wantsToLoseWeight = distanceToGoal > 0;
-       
-       if (Math.abs(currentWeight - goalWeight) <= 0.2) {
-         forecastView = { status: 'Goal Reached!', desc: 'You are maintaining your target.', color: 'var(--success)', date: 'Now' };
-       } else if ((wantsToLoseWeight && isLosingWeight) || (!wantsToLoseWeight && !isLosingWeight && dailyRate > 0)) {
-         // Moving in the RIGHT direction
-         const daysToGoal = Math.abs(distanceToGoal / dailyRate);
-         const targetDate = new Date();
-         targetDate.setDate(targetDate.getDate() + daysToGoal);
+    const oldest = sorted[sorted.length - 1];
+    const totalDaysDiff = Math.max(1, Math.round((parseISO(current.date).getTime() - parseISO(oldest.date).getTime()) / (1000 * 60 * 60 * 24)));
+
+    // Guard 1 — Not enough data
+    if (sorted.length < 2 || totalDaysDiff < 7) {
+      forecastView = { status: 'Need More Data', desc: 'At least 7 days of logs needed.', color: 'var(--text-secondary)', date: '--' };
+    } 
+    // Guard 2 — Already at goal
+    else if (Math.abs(currentWeight - goalWeight) <= 0.2) {
+      forecastView = { status: 'Goal Reached!', desc: 'You are maintaining your target.', color: 'var(--success)', date: 'Now' };
+    } 
+    else {
+      // Calculate rate over last ~30 days for more realistic long-term forecast
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      let comparison = sorted.find(e => parseISO(e.date).getTime() <= thirtyDaysAgo.getTime());
+      if (!comparison) comparison = oldest; 
+      
+      if (comparison && comparison.id !== current.id) {
+         const weightDiff = current.weight_kg - comparison.weight_kg;
+         const daysDiff = Math.max(1, Math.round((parseISO(current.date).getTime() - parseISO(comparison.date).getTime()) / (1000 * 60 * 60 * 24)));
          
-         let speedLabel = 'Optimal Pace';
-         let speedColor = 'var(--success)';
-         if (Math.abs(weeklyRate) > 1.0) {
-           speedLabel = 'Very Fast';
-           speedColor = 'var(--warning)';
-         } else if (Math.abs(weeklyRate) < 0.2) {
-           speedLabel = 'Slow & Steady';
-           speedColor = '#feca57';
+         const dailyRate = weightDiff / daysDiff;
+         const weeklyRate = dailyRate * 7;
+         const distanceToGoal = currentWeight - goalWeight;
+         const isLosingWeight = dailyRate < 0;
+         const wantsToLoseWeight = distanceToGoal > 0;
+         
+         // Guard 4 — Plateau
+         if (dailyRate > -0.01 && dailyRate < 0.01) {
+            forecastView = { status: 'Stagnant', desc: 'Your weight trend has plateaued.', color: 'var(--warning)', date: '--' };
          }
-         
-         const formattedDate = daysToGoal > 365 ? '1+ Year' : format(targetDate, 'MMM yyyy');
-         forecastView = { 
-           status: speedLabel, 
-           desc: `Trending perfectly at ${Math.abs(weeklyRate).toFixed(1)}kg/week.`, 
-           color: speedColor, 
-           date: formattedDate
-         };
-       } else {
-         // Moving in the WRONG direction or completely stagnant
-         if (Math.abs(weeklyRate) < 0.05) {
-            forecastView = { status: 'Stagnant', desc: 'Your weight trend has plateaued.', color: 'var(--text-secondary)', date: '--' };
-         } else {
+         // Guard 3 — Trending away from goal
+         else if ((wantsToLoseWeight && !isLosingWeight) || (!wantsToLoseWeight && isLosingWeight)) {
             forecastView = { status: 'Off Track', desc: 'Your current trend is moving away from the goal.', color: '#ff4757', date: '--' };
          }
-       }
+         else {
+           // Moving in the RIGHT direction
+           const daysToGoal = Math.abs(distanceToGoal / dailyRate);
+           
+           // Guard 5 — Unrealistic forecast
+           if (daysToGoal > 730) {
+             forecastView = { status: 'Long Term Goal', desc: 'Keep going! A long journey ahead.', color: 'var(--accent-primary)', date: '2+ Years' };
+           } else {
+             const targetDate = new Date();
+             targetDate.setDate(targetDate.getDate() + daysToGoal);
+             
+             let speedLabel = 'Optimal Pace';
+             let speedColor = 'var(--success)';
+             if (Math.abs(weeklyRate) > 1.0) {
+               speedLabel = 'Very Fast';
+               speedColor = 'var(--warning)';
+             } else if (Math.abs(weeklyRate) < 0.2) {
+               speedLabel = 'Slow & Steady';
+               speedColor = '#feca57';
+             }
+             
+             const formattedDate = format(targetDate, 'MMM yyyy');
+             forecastView = { 
+               status: speedLabel, 
+               desc: `Trending perfectly at ${Math.abs(weeklyRate).toFixed(1)}kg/week.`, 
+               color: speedColor, 
+               date: formattedDate
+             };
+           }
+         }
+      }
     }
+  }
+
+  // --- Daily Macro Targets Logic ---
+  let macroVars = null;
+  let macroErrorMessage = null;
+  
+  if (!currentWeight) {
+    macroErrorMessage = "Log your first weight to see targets.";
+  } else if (!settings?.age || !settings?.gender || !settings?.activity_level || !settings?.fitness_goal) {
+    macroErrorMessage = "Complete your profile in Settings to see targets.";
+  } else {
+    const { age, gender, activity_level, fitness_goal } = settings;
+    const w = currentWeight;
+    const h = height_cm;
+    
+    // BMR (Mifflin-St Jeor)
+    let bmr = (10 * w) + (6.25 * h) - (5 * age);
+    if (gender === 'Male') bmr += 5; else bmr -= 161;
+    
+    // TDEE Multiplier
+    let mult = 1.2;
+    if (activity_level === 'lightly_active') mult = 1.375;
+    if (activity_level === 'moderately_active') mult = 1.55;
+    if (activity_level === 'very_active') mult = 1.725;
+    
+    const tdee = bmr * mult;
+    
+    let targetCals = tdee;
+    let targetProtein = w * 1.6;
+    
+    if (fitness_goal === 'Fat Loss') {
+      targetCals = tdee - 400;
+      targetProtein = w * 2.2;
+    } else if (fitness_goal === 'Muscle Gain') {
+      targetCals = tdee + 250;
+      targetProtein = w * 1.8;
+    }
+    
+    // Safety Floor
+    targetCals = Math.round(Math.max(gender === 'Female' ? 1200 : 1500, targetCals));
+    targetProtein = Math.round(targetProtein);
+    
+    const targetFats = Math.round((targetCals * 0.25) / 9);
+    const targetCarbs = Math.round((targetCals - (targetProtein * 4) - (targetFats * 9)) / 4);
+    
+    const activityLabelMapping = {
+      'sedentary': 'Sedentary',
+      'lightly_active': 'Lightly active',
+      'moderately_active': 'Moderately active',
+      'very_active': 'Very active'
+    };
+  
+    macroVars = {
+      cals: targetCals,
+      protein: targetProtein,
+      fats: targetFats,
+      carbs: Math.max(0, targetCarbs), // Prevent negatives
+      label: `Based on ${fitness_goal.toLowerCase()} goal · ${activityLabelMapping[activity_level]}`
+    };
   }
 
   const handleExport = async () => {
@@ -162,14 +238,12 @@ export const Home: React.FC = () => {
       id: uuidv4(),
       date,
       weight_kg: parseFloat(weightStr),
-      body_fat_pct: bfStr ? parseFloat(bfStr) : undefined,
       notes,
       created_at: Date.now()
     });
     
     setLogOpen(false);
     setWeightStr('');
-    setBfStr('');
     setNotes('');
   };
 
@@ -230,32 +304,25 @@ export const Home: React.FC = () => {
               )}
             </div>
             <div className="glass-panel text-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <Flame size={24} style={{ margin: '0 auto 8px', color: 'var(--warning)' }} />
-              <div className="stat-value" style={{ lineHeight: '1.2' }}>{currentBF ?? '--'}</div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>% Body Fat</p>
-            </div>
-          <div className="glass-panel text-center" style={{ gridColumn: 'span 2' }}>
-            <Activity size={24} style={{ margin: '0 auto 8px', color: 'var(--success)' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-              <div>
-                <div className="stat-value" style={{ fontSize: '1.5rem' }}>{bmi ?? '--'}</div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>BMI</p>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <Activity size={24} style={{ margin: '0 auto 8px', color: 'var(--success)' }} />
+              <div className="stat-value" style={{ lineHeight: '1.2' }}>{bmi ?? '--'}</div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>BMI</p>
+              {bmi && (
                 <div style={{ 
-                  fontSize: '1.5rem', 
-                  fontWeight: 800, 
-                  fontFamily: "'Space Grotesk', sans-serif", 
-                  color: bmiColor,
-                  lineHeight: '1.2'
+                  marginTop: '4px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: 600, 
+                  color: bmiColor, 
+                  padding: '2px 8px', 
+                  borderRadius: '8px', 
+                  background: 'var(--bg-secondary)', 
+                  border: '1px solid var(--glass-border)' 
                 }}>
                   {bmiCategory}
                 </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Status</p>
-              </div>
+              )}
             </div>
           </div>
-        </div>
 
         {/* Chart */}
         <div className="glass-panel" style={{ height: '300px', display: 'flex', flexDirection: 'column' }}>
@@ -338,6 +405,54 @@ export const Home: React.FC = () => {
           </div>
         )}
 
+        {/* Daily Macros Card */}
+        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <h3 style={{ margin: 0 }}>Daily Targets</h3>
+             <Link to="/settings" style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', textDecoration: 'none' }}>Update &rarr;</Link>
+          </div>
+          
+          {macroErrorMessage ? (
+               <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                 {macroErrorMessage}
+                 {macroErrorMessage.includes('Complete') && (
+                   <span style={{ display: 'block', marginTop: '8px' }}>
+                     <Link to="/settings" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'inline-block' }}>Go to Settings</Link>
+                   </span>
+                 )}
+               </p>
+          ) : macroVars && (
+             <>
+               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center' }}>
+                 <div>
+                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Calories</div>
+                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}>{macroVars.cals}</div>
+                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>kcal</div>
+                 </div>
+                 <div>
+                   <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)' }}>Protein</div>
+                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}>{macroVars.protein}</div>
+                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>g</div>
+                 </div>
+                 <div>
+                   <div style={{ fontSize: '0.75rem', color: 'var(--warning)' }}>Carbs</div>
+                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}>{macroVars.carbs}</div>
+                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>g</div>
+                 </div>
+                 <div>
+                   <div style={{ fontSize: '0.75rem', color: 'var(--success)' }}>Fats</div>
+                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}>{macroVars.fats}</div>
+                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>g</div>
+                 </div>
+               </div>
+               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--glass-border)', paddingTop: '12px', marginTop: '4px' }}>
+                 {macroVars.label}
+                 <p style={{ margin: '4px 0 0', fontStyle: 'italic', opacity: 0.7 }}>These are estimates based on your stats. Adjust based on how you feel.</p>
+               </div>
+             </>
+          )}
+        </div>
+
       </div>
       </div>
       <div 
@@ -365,15 +480,9 @@ export const Home: React.FC = () => {
             <label className="input-label">Date</label>
             <input type="date" className="input-field" value={date} onChange={e => setDate(e.target.value)} required />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div className="input-group" style={{ marginBottom: 0 }}>
-              <label className="input-label">Weight (kg)</label>
-              <input type="number" step="0.1" className="input-field" placeholder="0.0" value={weightStr} onChange={e => setWeightStr(e.target.value)} required />
-            </div>
-            <div className="input-group" style={{ marginBottom: 0 }}>
-              <label className="input-label">Body Fat (%)</label>
-              <input type="number" step="0.1" className="input-field" placeholder="Optional" value={bfStr} onChange={e => setBfStr(e.target.value)} />
-            </div>
+          <div className="input-group" style={{ marginBottom: 0 }}>
+            <label className="input-label">Weight (kg)</label>
+            <input type="number" step="0.1" className="input-field" placeholder="0.0" value={weightStr} onChange={e => setWeightStr(e.target.value)} required />
           </div>
           <div className="input-group">
             <label className="input-label">Notes</label>

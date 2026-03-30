@@ -11,11 +11,19 @@ export const Settings: React.FC = () => {
 
   const [height, setHeight] = useState<string>('');
   const [goal, setGoal] = useState<string>('');
+  const [age, setAge] = useState<string>('');
+  const [gender, setGender] = useState<'Male'|'Female'|''>('');
+  const [fitnessGoal, setFitnessGoal] = useState<'Fat Loss'|'Muscle Gain'|'Maintain'|''>('');
+  const [activityLevel, setActivityLevel] = useState<'sedentary'|'lightly_active'|'moderately_active'|'very_active'|''>('');
 
   React.useEffect(() => {
     if (settings) {
-      setHeight(settings.height_cm.toString());
-      setGoal(settings.goal_weight_kg.toString());
+      setHeight(settings.height_cm?.toString() || '');
+      setGoal(settings.goal_weight_kg?.toString() || '');
+      setAge(settings.age?.toString() || '');
+      setGender(settings.gender || '');
+      setFitnessGoal(settings.fitness_goal || '');
+      setActivityLevel(settings.activity_level || '');
     }
   }, [settings]);
 
@@ -24,7 +32,11 @@ export const Settings: React.FC = () => {
     await activeDb.settings.put({
       id: 1,
       height_cm: parseFloat(height),
-      goal_weight_kg: parseFloat(goal)
+      goal_weight_kg: parseFloat(goal),
+      age: age ? parseInt(age) : undefined,
+      gender: gender ? gender : undefined,
+      fitness_goal: fitnessGoal ? fitnessGoal : undefined,
+      activity_level: activityLevel ? activityLevel : undefined
     });
     alert('Profile updated!');
   };
@@ -78,10 +90,48 @@ export const Settings: React.FC = () => {
           <label className="input-label">Height (cm)</label>
           <input type="number" className="input-field" value={height} onChange={e => setHeight(e.target.value)} placeholder="175" />
         </div>
-        <div className="input-group text-left mt-4">
-          <label className="input-label">Goal Weight (kg)</label>
-          <input type="number" className="input-field" value={goal} onChange={e => setGoal(e.target.value)} placeholder="70" />
+        <div className="input-group text-left mt-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: 0 }}>
+          <div>
+            <label className="input-label">Age</label>
+            <input type="number" className="input-field" value={age} onChange={e => setAge(e.target.value)} placeholder="29" />
+          </div>
+          <div>
+            <label className="input-label">Gender</label>
+            <select className="input-field" value={gender} onChange={e => setGender(e.target.value as any)}>
+              <option value="">Select...</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
         </div>
+        
+        <div className="input-group text-left mt-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: 0 }}>
+          <div>
+            <label className="input-label">Goal Weight (kg)</label>
+            <input type="number" className="input-field" value={goal} onChange={e => setGoal(e.target.value)} placeholder="70" />
+          </div>
+          <div>
+            <label className="input-label">Fitness Goal</label>
+            <select className="input-field" value={fitnessGoal} onChange={e => setFitnessGoal(e.target.value as any)}>
+              <option value="">Select...</option>
+              <option value="Fat Loss">Fat Loss</option>
+              <option value="Muscle Gain">Muscle Gain</option>
+              <option value="Maintain">Maintain</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="input-group text-left mt-4">
+          <label className="input-label">Activity Level</label>
+          <select className="input-field" value={activityLevel} onChange={e => setActivityLevel(e.target.value as any)}>
+            <option value="">Select...</option>
+            <option value="sedentary">Sedentary (Desk job, little exercise)</option>
+            <option value="lightly_active">Lightly active (1-3 days/week)</option>
+            <option value="moderately_active">Moderately active (3-5 days/week)</option>
+            <option value="very_active">Very active (6-7 days/week)</option>
+          </select>
+        </div>
+
         <button className="btn btn-primary" style={{ marginTop: '24px', width: '100%' }} onClick={handleSaveProfile}>
           Save Profile
         </button>

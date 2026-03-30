@@ -67,21 +67,21 @@ body {
   border-radius: 50%;
   filter: blur(80px);
   opacity: 0.5;
-  animation: floatOrb 15s infinite ease-in-out alternate;
+  animation: floatOrb 9s infinite ease-in-out alternate;
 }
 
 .orb-1 {
   width: 400px; height: 400px;
   background: rgba(0, 242, 254, 0.2);
   top: -50px; left: -100px;
-  animation-duration: 18s;
+  animation-duration: 8s;
 }
 
 .orb-2 {
   width: 500px; height: 500px;
   background: rgba(79, 172, 254, 0.15);
   bottom: -100px; right: -100px;
-  animation-duration: 22s;
+  animation-duration: 10s;
   animation-delay: -5s;
 }
 
@@ -89,8 +89,8 @@ body {
   width: 350px; height: 350px;
   background: rgba(135, 100, 255, 0.15);
   top: 30%; left: 50%;
-  animation-duration: 16s;
-  animation-delay: -8s;
+  animation-duration: 7s;
+  animation-delay: -3s;
 }
 
 @keyframes floatOrb {

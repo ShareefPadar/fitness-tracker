@@ -24,6 +24,8 @@ export const Auth: React.FC<AuthProps> = ({ onGuestLogin }) => {
 
     if (error) {
       setError(error.message);
+    } else {
+      window.history.replaceState(null, '', '/');
     }
     setLoading(false);
   };
@@ -82,7 +84,10 @@ export const Auth: React.FC<AuthProps> = ({ onGuestLogin }) => {
         <button 
           className="btn btn-secondary" 
           style={{ width: '100%', borderColor: 'var(--glass-border)' }}
-          onClick={onGuestLogin}
+          onClick={() => {
+            window.history.replaceState(null, '', '/');
+            onGuestLogin();
+          }}
         >
           <UserCircle size={18} /> Recruiters: Continue as Guest
         </button>
