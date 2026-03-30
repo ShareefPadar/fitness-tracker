@@ -32,8 +32,8 @@ export const History: React.FC = () => {
       </header>
 
       <div className="flex-col gap-4" style={{ display: 'flex' }}>
-        {entries?.map(e => (
-          <div key={e.id} className="glass-panel items-center justify-between flex" style={{ padding: '16px' }}>
+        {entries?.map((e, index) => (
+          <div key={e.id} className="glass-panel items-center justify-between flex animate-fade-in" style={{ padding: '16px', animationDelay: `${index * 0.05}s`, opacity: 0 }}>
             <div>
               <p style={{ fontWeight: 600 }}>{e.date}</p>
               <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>

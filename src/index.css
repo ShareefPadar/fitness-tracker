@@ -172,6 +172,11 @@ p, span, small, input, button, textarea {
   outline: none;
 }
 
+.btn:active, .btn-ghost:active, button:active {
+  transform: scale(0.96) !important;
+  transition: transform 0.1s;
+}
+
 .btn-primary {
   background: var(--accent-gradient);
   color: #0b0c10;
@@ -277,10 +282,22 @@ p, span, small, input, button, textarea {
 
 .animate-fade-in {
   animation: fadeInUp 0.5s ease-out forwards;
+  opacity: 0;
 }
 
 .animate-slide-right {
   animation: slideInRight 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes floatAndPulse {
+  0% { transform: translateY(0); box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); }
+  50% { transform: translateY(-4px); box-shadow: 0 0 30px rgba(0, 242, 254, 0.8); }
+  100% { transform: translateY(0); box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); }
+}
+
+.fab-pulse {
+  animation: floatAndPulse 3s infinite ease-in-out;
 }
 
 /* Utilities */

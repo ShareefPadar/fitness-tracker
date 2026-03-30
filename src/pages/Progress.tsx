@@ -32,7 +32,7 @@ export const Progress: React.FC = () => {
       <h3 className="mb-4">Milestones</h3>
       <div className="flex-col gap-4" style={{ display: 'flex' }}>
         {entryCount > 0 ? (
-          <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="glass-panel animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '16px', opacity: 0, animationDelay: '0.1s' }}>
             <div style={{ background: 'var(--accent-glow)', padding: '12px', borderRadius: '50%' }}>
               <Trophy size={24} color="var(--accent-primary)" />
             </div>
@@ -49,7 +49,7 @@ export const Progress: React.FC = () => {
         )}
 
         {entryCount >= 5 && (
-          <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="glass-panel animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '16px', opacity: 0, animationDelay: '0.2s' }}>
             <div style={{ background: 'rgba(16, 185, 129, 0.2)', padding: '12px', borderRadius: '50%' }}>
               <Trophy size={24} color="var(--success)" />
             </div>

@@ -6,6 +6,7 @@ import { BottomSheet } from '../components/BottomSheet';
 import { Plus, Weight, Activity, Share2, Target } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { v4 as uuidv4 } from 'uuid';
+import CountUp from 'react-countup';
 import { format, parseISO, subMonths, subYears, isAfter } from 'date-fns';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
@@ -295,7 +296,7 @@ export const Home: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
             <div className="glass-panel text-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <Weight size={24} style={{ margin: '0 auto 8px', color: 'var(--accent-primary)' }} />
-              <div className="stat-value" style={{ lineHeight: '1.2' }}>{currentWeight ?? '--'}</div>
+              <div className="stat-value" style={{ lineHeight: '1.2' }}>{currentWeight ? <CountUp end={currentWeight} decimals={1} duration={2} /> : '--'}</div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>kg</p>
               {paceBadge && (
                 <div style={{ marginTop: '4px', fontSize: '0.75rem', fontWeight: 600, color: paceBadge.color, padding: '2px 8px', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)' }}>
@@ -305,7 +306,7 @@ export const Home: React.FC = () => {
             </div>
             <div className="glass-panel text-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <Activity size={24} style={{ margin: '0 auto 8px', color: 'var(--success)' }} />
-              <div className="stat-value" style={{ lineHeight: '1.2' }}>{bmi ?? '--'}</div>
+              <div className="stat-value" style={{ lineHeight: '1.2' }}>{bmi ? <CountUp end={parseFloat(bmi)} decimals={1} duration={2} /> : '--'}</div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>BMI</p>
               {bmi && (
                 <div style={{ 
@@ -426,22 +427,22 @@ export const Home: React.FC = () => {
                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center' }}>
                  <div>
                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Calories</div>
-                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}>{macroVars.cals}</div>
+                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}><CountUp end={macroVars.cals} duration={2} separator="," /></div>
                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>kcal</div>
                  </div>
                  <div>
                    <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)' }}>Protein</div>
-                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}>{macroVars.protein}</div>
+                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}><CountUp end={macroVars.protein} duration={2} /></div>
                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>g</div>
                  </div>
                  <div>
                    <div style={{ fontSize: '0.75rem', color: 'var(--warning)' }}>Carbs</div>
-                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}>{macroVars.carbs}</div>
+                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}><CountUp end={macroVars.carbs} duration={2} /></div>
                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>g</div>
                  </div>
                  <div>
                    <div style={{ fontSize: '0.75rem', color: 'var(--success)' }}>Fats</div>
-                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}>{macroVars.fats}</div>
+                   <div style={{ fontWeight: 800, fontSize: '1.25rem', fontFamily: "'Space Grotesk', sans-serif" }}><CountUp end={macroVars.fats} duration={2} /></div>
                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>g</div>
                  </div>
                </div>
@@ -457,6 +458,7 @@ export const Home: React.FC = () => {
       </div>
       <div 
         onClick={() => setLogOpen(true)}
+        className="fab-pulse"
         style={{
           position: 'fixed',
           bottom: 'calc(105px + env(safe-area-inset-bottom))',
