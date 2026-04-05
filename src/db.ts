@@ -6,6 +6,8 @@ export interface Entry {
   weight_kg: number;
   body_fat_pct?: number; // optional
   notes?: string;
+  source?: string; // 'manual', 'google_fit', 'csv_import'
+  google_fit_synced?: boolean;
   created_at: number; // timestamp
 }
 
@@ -26,6 +28,14 @@ export interface Settings {
   gender?: 'Male' | 'Female';
   fitness_goal?: 'Fat Loss' | 'Muscle Gain' | 'Maintain';
   activity_level?: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active';
+  onboarding_complete?: boolean;
+  google_fit_connected?: boolean;
+  google_fit_token?: string;
+  google_fit_last_synced_at?: string;
+  google_fit_write_enabled?: boolean;
+  google_fit_write_token?: string;
+  reminders_enabled?: boolean;
+  reminder_frequency_days?: number;
 }
 
 // Main Production DB for 'Cheppu'
@@ -100,7 +110,7 @@ export const seedGuestData = async () => {
 
     await guestDb.entries.bulkPut(sampleEntries);
     await guestDb.measurements.bulkPut(sampleMeasures);
-    await guestDb.settings.put({ id: 1, height_cm: 180, goal_weight_kg: 72, age: 28, gender: 'Male', fitness_goal: 'Fat Loss', activity_level: 'moderately_active' });
+    await guestDb.settings.put({ id: 1, height_cm: 180, goal_weight_kg: 72, age: 28, gender: 'Male', fitness_goal: 'Fat Loss', activity_level: 'moderately_active', reminders_enabled: false, reminder_frequency_days: 3 });
   } catch (err) {
     console.error('Guest Seeding Error:', err);
   }
@@ -110,7 +120,7 @@ export const seedCheppuData = async () => {
   try {
     const count = await db.entries.count();
     // Always ensure settings are there
-    await db.settings.put({ id: 1, height_cm: 168, goal_weight_kg: 65, age: 25, gender: 'Male', fitness_goal: 'Muscle Gain', activity_level: 'moderately_active' });
+    await db.settings.put({ id: 1, height_cm: 168, goal_weight_kg: 65, age: 25, gender: 'Male', fitness_goal: 'Muscle Gain', activity_level: 'moderately_active', reminders_enabled: false, reminder_frequency_days: 3 });
 
     // Only import if database is empty to prevent duplicates
     if (count > 0) return;

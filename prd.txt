@@ -1,0 +1,576 @@
+form.
+Feature PRD — Google Sign-In & Google Fit
+Version 1.0  ·  March 2025  ·  Addendum to main PRD
+
+
+1. Feature Overview
+This PRD covers two distinct but related Google integrations for form. They are separate in implementation but designed to work together seamlessly from the user's perspective.
+
+Integration
+What it does
+Implementation via
+Google Sign-In
+Lets users create an account and log in using their Google account. No email or password needed.
+Supabase Auth
+Google Fit Sync
+Imports the user's historical body weight data from Google Fit into form. One-time or periodic sync.
+Google Fit REST API
+
+Important distinction
+Google Sign-In and Google Fit are completely independent. A user can sign in with Google without having Google Fit data. They require separate OAuth scopes and separate setup steps.
+
+
+
+Part A — Authentication (Google Sign-In & Email/Password)
+
+2. Authentication
+2.1 Overview
+form. supports two authentication methods: Google Sign-In for users with a Google account, and Email/Password for users who prefer not to use Google. Both are handled entirely by Supabase Auth. No third-party auth SDK is needed beyond what Supabase provides.
+
+Scope decision
+Both methods create the same type of account in Supabase. A user who signs up with email can later link their Google account if they choose, but this is a v1.1 consideration. In v1.0 the two methods are independent.
+
+2.2 Auth Screen Layout & Copy
+The auth screen is the first screen every user sees. It presents both sign-in and sign-up options clearly without overwhelming the user.
+
+Screen headline
+Welcome to form.
+Screen subheadline
+Track your body stats. No pressure.
+Google button label
+Continue with Google
+Google button subtext
+New to form.? This creates your account automatically.
+Divider between options
+or
+Email section label
+Sign in with email
+Email field placeholder
+you@example.com
+Password field placeholder
+Password
+Sign in button
+Sign in
+Sign up link below
+No account yet? Create one
+Forgot password link
+Forgot password?
+
+Sign in vs sign up screens
+The default auth screen is Sign In. Tapping 'No account yet? Create one' navigates to a separate Sign Up screen with email, password, and confirm password fields. This keeps the default view uncluttered for returning users.
+
+2.3 Google Sign-In Flow
+	•	User taps 'Continue with Google'
+	•	Native Google account picker opens
+	•	User selects their Google account
+	•	Supabase checks if this Google account already exists in auth.users
+	•	New user — Supabase creates auth.users record, triggers profiles insert, sets onboarding_complete = false — lands on onboarding
+	•	Returning user — Supabase retrieves existing session, onboarding_complete = true — lands on Home dashboard
+
+2.4 Email Sign-Up Flow
+	•	User taps 'No account yet? Create one'
+	•	Sign Up screen appears with three fields: email, password, confirm password
+	•	Password requirements: minimum 8 characters — validated client-side before submission
+	•	User taps 'Create account'
+	•	Supabase sends a verification email to the provided address
+	•	User sees a confirmation screen: 'Check your email — tap the link to verify your account'
+	•	After clicking the verification link, user is redirected back to the app
+	•	Supabase creates auth.users record, triggers profiles insert, sets onboarding_complete = false
+	•	User lands on onboarding screen 1
+
+Email verification is required
+Users cannot access the app until they verify their email. If they try to sign in before verifying, show: 'Please verify your email first. Check your inbox or resend the link.'
+
+2.5 Email Sign-In Flow
+	•	Returning user enters email and password on the Sign In screen
+	•	Taps 'Sign in'
+	•	Supabase authenticates credentials
+	•	On success — session created, user lands on Home dashboard
+	•	On failure — show inline error: 'Incorrect email or password'
+
+2.6 Forgot Password Flow
+	•	User taps 'Forgot password?' on the Sign In screen
+	•	A single field screen appears asking for their email address
+	•	User enters email and taps 'Send reset link'
+	•	Supabase sends a password reset email
+	•	User sees: 'Reset link sent. Check your inbox.'
+	•	After clicking the link, user is taken to a Reset Password screen with new password and confirm password fields
+	•	On success — password updated, user is signed in and lands on Home dashboard
+
+Returning user logic
+If a returning user signs in with either method and their account exists in Supabase, they land directly on the Home dashboard with all data intact. No re-onboarding, no data loss.
+
+2.7 Supabase Configuration
+Email/Password
+Enable in Supabase Dashboard under Authentication > Providers > Email. Enable email confirmation.
+Google OAuth
+Enable in Supabase Dashboard under Authentication > Providers > Google. Requires Client ID and Secret.
+Redirect URL
+Set in Google Cloud Console to match Supabase callback URL
+Session handling
+Supabase manages all tokens and refresh cycles automatically for both methods
+User table
+Supabase auto-creates a record in auth.users on first sign-in or sign-up via either method
+Profile creation
+Supabase database trigger on auth.users insert — creates a row in your profiles table for all auth methods
+Password reset
+Supabase handles reset email sending. Configure the reset redirect URL in Supabase Dashboard > Auth > URL Configuration.
+
+2.8 Google Cloud Console Setup
+Required steps before the integration works in production:
+	•	Create a project in Google Cloud Console
+	•	Enable the Google Identity API
+	•	Create OAuth 2.0 credentials — application type: Web (for Supabase callback) and Android / iOS (for mobile app)
+	•	Add authorised redirect URI: your Supabase project callback URL
+	•	Add your app's bundle ID or package name to the OAuth client
+	•	Copy Client ID and Client Secret into Supabase Auth settings
+
+Cost
+Google OAuth is completely free. Google Cloud Console account is free. No billing required for authentication at any scale.
+
+2.9 All Scenarios — New vs Returning User
+Scenario
+What happens
+Where user lands
+Google — first time
+Supabase creates auth.users record, profiles insert, onboarding_complete = false
+Onboarding screen 1
+Google — returning user
+Supabase retrieves existing session, onboarding_complete = true
+Home dashboard
+Email — sign up
+Supabase sends verification email. User cannot access app until verified.
+'Check your email' screen
+Email — first sign in after verify
+Session created, profiles insert, onboarding_complete = false
+Onboarding screen 1
+Email — returning user
+Supabase authenticates, retrieves session
+Home dashboard
+Email — wrong password
+Auth fails
+Sign in screen with inline error
+Email — unverified
+Auth blocked by Supabase
+'Verify your email first' message
+Any — incomplete onboarding
+Session retrieved, onboarding_complete = false
+Onboarding resumes where left off
+
+2.10 Sign Out
+	•	Settings screen includes a 'Sign out' option
+	•	Calls Supabase signOut() which clears the local session
+	•	User is returned to the Sign-In screen
+	•	Local data on device is preserved — not deleted on sign out
+	•	User can sign back in with the same Google account and all data is restored
+
+2.11 Account Deletion
+	•	Settings screen includes a 'Delete account' option, behind a confirmation dialog
+	•	Deletes all rows in profiles, log_entries, and measurements tables for that user
+	•	Calls Supabase Admin API to delete the auth.users record
+	•	Clears local session and returns user to Sign-In screen
+	•	This action is irreversible — the confirmation dialog must state this explicitly
+
+
+
+Part B — Google Fit Sync
+
+3. Google Fit Weight Sync
+3.1 Overview
+Google Fit Sync imports the user's historical body weight data from Google Fit into form. This is a pull-only integration — form. reads weight data from Google Fit and stores it locally in Supabase. form. does not write back to Google Fit.
+
+Scope — weight only
+This integration syncs body weight data only. Steps, activity, heart rate, sleep, and other Google Fit data types are out of scope for v1.0.
+
+3.2 User Flow
+	•	After completing onboarding, user sees a prompt: 'Import your weight history from Google Fit?'
+	•	User taps 'Connect Google Fit'
+	•	Google OAuth consent screen appears, requesting fitness.body.read permission
+	•	User grants permission
+	•	App fetches all available weight entries from Google Fit (up to 12 months back)
+	•	App shows a preview: 'Found 47 weight entries between Jan 2024 and Mar 2025'
+	•	User taps 'Import' to confirm
+	•	Entries are written to Supabase, duplicates skipped
+	•	User sees import summary and lands on Home dashboard with data populated
+
+This prompt is optional
+If the user dismisses the Google Fit prompt, they are taken directly to the Home dashboard. They can trigger the sync later from Settings > Import data > Google Fit.
+
+3.3 OAuth Scope Required
+Scope
+https://www.googleapis.com/auth/fitness.body.read
+What it grants
+Read-only access to body weight and related body measurements from Google Fit
+What it does NOT grant
+Access to activity, location, steps, heart rate, sleep, or any other data type
+User sees
+Google consent screen stating: 'form. wants to view your body measurements'
+
+Separate OAuth token
+The Google Fit OAuth token is separate from the Google Sign-In token. Sign-In uses basic profile scope. Google Fit requires the fitness.body.read scope. The user will see two separate permission prompts across the app lifecycle — one for sign-in, one for Google Fit.
+
+3.4 Google Fit API — Data Fetching Logic
+Use the Google Fit REST API to fetch weight data. The key endpoint is the Datasets endpoint under the Users.dataSources resource.
+
+API
+Google Fitness REST API v1
+Endpoint
+users.dataSources.datasets.get
+Data type name
+com.google.weight
+Data source ID
+derived:com.google.weight:com.google.android.gms:merge_weight
+Time range
+Fetch from 12 months ago to today (configurable)
+Value returned
+Weight in kilograms (float), with a timestamp per entry
+Max entries
+No hard limit — paginate if response exceeds 1,000 entries
+
+3.5 Data Mapping
+Transform each Google Fit weight data point into a form. log entry before writing to Supabase.
+
+Google Fit field
+form. field
+Notes
+startTimeNanos
+date
+Convert nanoseconds to date (YYYY-MM-DD). Strip time — only the date matters.
+value[0].fpVal
+weight_kg
+Round to 1 decimal place. Google Fit stores as float.
+(not available)
+body_fat_pct
+Set to null — Google Fit weight data does not include body fat.
+(not available)
+notes
+Set to 'Imported from Google Fit' for traceability.
+
+3.6 Duplicate Handling
+	•	Before inserting each entry, check if a log_entries row already exists for that user on that date
+	•	If a row exists — skip the import for that date, do not overwrite
+	•	If no row exists — insert the new entry
+	•	Count skipped entries and include in the import summary shown to the user
+
+3.7 Import Summary Screen
+After the sync completes, show a summary card before navigating to the Home dashboard:
+	•	Total entries found in Google Fit
+	•	Entries successfully imported
+	•	Entries skipped (already existed in form.)
+	•	Date range of imported data — e.g. 'Jan 2024 to Mar 2025'
+	•	An undo option — 'Remove imported entries' — available for 60 seconds after import
+
+3.8 Re-sync Behaviour
+	•	User can trigger a manual re-sync at any time from Settings > Import data > Sync Google Fit
+	•	Re-sync fetches entries from the last synced date to today — not a full 12-month re-fetch
+	•	Store last_synced_at timestamp in the profiles table to track this
+	•	No automatic background sync in v1.0 — manual only
+
+3.9 Disconnect Google Fit
+	•	User can revoke Google Fit access from Settings > Import data > Disconnect Google Fit
+	•	This revokes the OAuth token stored in the app
+	•	Existing imported data is NOT deleted — the user keeps their history
+	•	User can reconnect at any time and re-sync
+
+
+4. Supabase Schema Changes
+The following additions are needed to support both integrations. No existing columns are modified.
+
+4.1 profiles table — new columns
+onboarding_complete
+boolean, default false — set to true after onboarding finishes
+google_fit_connected
+boolean, default false — set to true after user grants Google Fit permission
+google_fit_token
+text, nullable — encrypted OAuth token for Google Fit API calls
+google_fit_last_synced_at
+timestamptz, nullable — timestamp of the last successful Google Fit sync
+
+4.2 log_entries table — new column
+source
+text, nullable — values: 'manual', 'google_fit', 'csv_import'. Defaults to 'manual'.
+
+Why track source?
+Knowing whether an entry came from manual logging, Google Fit, or CSV import lets the app display it differently in the history list (e.g. a small 'Google Fit' badge) and helps with duplicate detection logic during re-syncs.
+
+
+5. Error Handling
+
+Error
+Cause
+User-facing message
+Google sign-in cancelled
+User dismissed Google account picker
+'Sign-in cancelled. Tap below to try again.'
+Google sign-in network error
+No internet during OAuth flow
+'No internet connection. Please try again.'
+Email already registered
+User tries to sign up with an existing email
+'An account with this email already exists. Sign in instead.'
+Wrong password
+Incorrect password on sign in
+'Incorrect email or password.'
+Email not verified
+User tries to sign in before verifying
+'Please verify your email first. Resend link?'
+Weak password
+Password under 8 characters
+'Password must be at least 8 characters.' — shown inline before submit
+Invalid email format
+Malformed email entered
+'Please enter a valid email address.' — shown inline before submit
+Reset link expired
+Password reset link is older than 1 hour
+'This link has expired. Request a new one.'
+Google Fit permission denied
+User declined fitness.body.read scope
+'No problem — you can connect Google Fit later in Settings.'
+Google Fit API error
+API quota exceeded or token expired
+'Could not reach Google Fit. Please try again in a moment.'
+No weight data in Google Fit
+User has never logged weight in Google Fit
+'No weight entries found in Google Fit. You can log manually in form.'
+All entries already exist
+Full re-sync with no new data
+'You are already up to date — no new entries found.'
+
+
+6. Google Cloud Console Setup Checklist
+Complete these steps before testing either integration on a real device.
+
+6.1 For Google Sign-In
+	•	Create a new project in Google Cloud Console
+	•	Enable the Google Identity API
+	•	Create OAuth 2.0 credentials (Web application type)
+	•	Add Supabase callback URL to authorised redirect URIs
+	•	Create separate OAuth credentials for Android and iOS with correct bundle ID / package name
+	•	Add Client ID and Client Secret to Supabase Dashboard > Authentication > Providers > Google
+
+6.2 For Google Fit
+	•	In the same Google Cloud project, enable the Fitness API
+	•	Add fitness.body.read to the OAuth consent screen scopes
+	•	Complete the OAuth consent screen — app name, support email, privacy policy URL
+	•	If app is not yet published, add test user Google accounts in the OAuth consent screen
+	•	Note: Google Fit API does NOT require paid API access — it is free within standard quotas
+
+App verification
+For production release, Google requires OAuth app verification if you request sensitive scopes. fitness.body.read is classified as a sensitive scope. Submit for verification before App Store / Play Store launch. Review typically takes 1–3 weeks.
+
+
+7. Constraints & Known Limitations
+	•	Google Fit is Android-first. On iOS, Google Fit data availability depends on whether the user has the Google Fit app installed and syncing. Apple Health is the preferred data source for iOS users — out of scope for v1.0.
+	•	Google Fit API quota is 10,000 requests per day per project — more than sufficient for v1.0 user volumes.
+	•	The Google Fit app is being deprecated by Google in favour of Google Health Connect (Android 14+). This integration targets the current Fitness API which remains active. A Health Connect migration may be needed in v2.0.
+	•	Google OAuth app verification is required before non-test users can use Google Fit sync in production. Plan 2–3 weeks for review before launch.
+
+
+
+Part C — Two-Way Google Fit Sync (v1.1)
+
+7. Two-Way Google Fit Sync (v1.1)
+7.1 Overview
+In v1.0, Google Fit sync is read-only — form. imports weight from Google Fit but does not write back. In v1.1, users can optionally enable two-way sync so that every weight entry logged in form. is also pushed to Google Fit automatically.
+
+Opt-in only
+Two-way sync is off by default. Users enable it in Settings > Google Fit > Sync weight back to Google Fit. Users who do not care about cross-app sync are not affected.
+
+7.2 Additional OAuth Scope Required
+New scope
+https://www.googleapis.com/auth/fitness.body.write
+Combined scopes
+fitness.body.read + fitness.body.write
+User sees
+Updated consent screen: 'form. wants to view and add body measurements'
+When requested
+Only when user enables the two-way sync toggle in Settings — not during initial Google Fit setup
+
+Re-consent required
+Adding fitness.body.write requires the user to re-authorise Google Fit with the updated scope. When the user enables the toggle, trigger the OAuth flow again to request the write permission. Existing read token is insufficient.
+
+7.3 Write Flow
+	•	User logs a weight entry in form. (quick log or full entry screen)
+	•	Entry is saved to Supabase as normal
+	•	If two-way sync is enabled, form. immediately sends the entry to Google Fit via the API
+	•	Google Fit stores the entry and it appears in the Google Fit app and any connected apps
+	•	The write call is made asynchronously — it does not block the UI or delay the log confirmation
+
+7.4 Google Fit API — Write Endpoint
+API
+Google Fitness REST API v1
+Endpoint
+users.dataSources.datasets.patch
+Data type name
+com.google.weight
+Data source ID
+raw:com.google.weight:your_app_package_name
+Value to send
+Weight in kilograms (float), with startTimeNanos and endTimeNanos set to the same timestamp
+
+7.5 Failure Handling
+The write to Google Fit is best-effort. A failure must never prevent the entry from being saved in form.
+	•	If the Google Fit write call fails — save the entry to Supabase anyway, queue the Google Fit write for retry
+	•	Retry up to 3 times with exponential backoff
+	•	If all retries fail — entry remains in form. correctly, show a silent indicator in the log history (small icon) that this entry was not synced to Google Fit
+	•	User can manually retry failed syncs from Settings > Google Fit > Retry failed entries
+
+7.6 Retroactive Sync
+	•	When a user first enables two-way sync, offer an option: 'Push all existing form. entries to Google Fit?'
+	•	This is optional — user can choose to sync from today only
+	•	If accepted, all existing log_entries for that user are sent to Google Fit in a single batch
+	•	Duplicates in Google Fit (entries that already exist from the v1.0 import) are overwritten with the same value — no harm done
+
+7.7 Supabase Schema Addition
+New column
+google_fit_write_enabled — boolean, default false, on the profiles table
+New column
+google_fit_write_token — text, nullable — stores the upgraded OAuth token with write scope
+New column on log_entries
+google_fit_synced — boolean, default false — tracks whether this entry has been pushed to Google Fit
+
+
+8. Google Fit Data Source Strategy
+8.1 The Problem with the Merged Feed
+Google Fit does not decide which data is correct. It is a passive data store. When multiple apps write weight data to Google Fit, each writes under its own data source ID. The merged feed simply combines them — last write wins for the same timestamp. form. importing from the merged feed risks pulling in data from Withings scales, Garmin watches, MyFitnessPal, and other apps the user may not even recognise.
+
+Core principle
+form. should by default only import data that it can vouch for. The safest approach is to read from form.'s own data source first, and make mixed-source import an explicit opt-in choice.
+
+8.2 Data Source Approach
+Default import
+Read only from form.'s own Google Fit data source (raw:com.google.weight:form.package.name). This contains only entries that form. itself previously wrote to Google Fit.
+Mixed source import (opt-in)
+Read from the merged feed (derived:com.google.weight:merge). Contains data from all connected apps. User must explicitly enable this in Settings > Google Fit > Include data from other apps.
+Data source creation
+form.'s own data source must be created via the API on first write. On first two-way sync enable, form. calls users.dataSources.create before any write.
+Source label in history
+Each imported entry shows a small source badge in the log history: 'Google Fit' for merged, 'form. backup' for own source.
+
+8.3 Mixed Source Import — User Warning
+When the user enables 'Include data from other apps', show a one-time warning:
+Warning shown to user
+'This will import weight entries from all apps connected to Google Fit — including smart scales, other fitness apps, and manual entries. Some entries may be duplicates or from devices you no longer use. You can review and delete them after import.'
+
+8.4 Unit Handling
+	•	Google Fit stores weight in kilograms internally regardless of what the user sees in the Google Fit app
+	•	All values from the Google Fit API are already in kg — no conversion needed on import
+	•	Round to 1 decimal place on import — Google Fit stores as float with many decimal places
+	•	Validate range on import: discard any entry below 20 kg or above 300 kg as corrupted data
+
+
+9. Edge Cases
+9.1 Authentication Edge Cases
+Edge case
+When it occurs
+Handling
+Same email used for both Google and email sign-up
+User previously signed up with email then tries Google with same address
+Supabase blocks by default. Show: 'An account with this email already exists. Sign in with your password instead.'
+Session expires mid-onboarding
+User takes too long on onboarding, token expires
+Detect 401 on next API call, show 'Your session expired. Please sign in again.' Preserve onboarding progress in local state so user does not start over.
+Google account password changed externally
+User changes Google password on another device
+Supabase refresh token becomes invalid. On next app open, detect invalid session and redirect to sign-in screen with message: 'Please sign in again.'
+Google account deleted externally
+User deletes their Google account
+Next sign-in attempt fails. Show: 'Could not sign in with this Google account. It may have been deleted.' Offer email sign-in as alternative.
+Verification email in spam
+Email provider filters the verification email
+On the 'Check your email' screen, show 'Didn't receive it? Check your spam folder or resend.' Resend button with 60-second cooldown.
+Verification link opened on different device
+User signs up on phone, clicks link on laptop
+Supabase handles this. After verification, user must sign in manually on the original device — deep link back to app is not guaranteed cross-device.
+Rapid repeated sign-up with same email
+Bot or accidental double-tap
+Supabase rate limits auth attempts. Show: 'Too many attempts. Please wait a moment.' after threshold.
+Password reset link used twice
+User clicks expired or already-used reset link
+Show: 'This link has already been used or has expired. Request a new one.' Do not crash.
+App uninstalled and reinstalled
+User reinstalls form. without signing out first
+Local session is cleared. User must sign in again. All data is in Supabase — nothing lost.
+
+9.2 Google Fit Import Edge Cases
+Edge case
+When it occurs
+Handling
+Multiple entries on the same date
+User used a smart scale + manual entry + another app on the same day
+Keep the first entry encountered for that date (from form.'s own source if available, otherwise earliest timestamp). Log count of skipped same-day duplicates separately in import summary.
+Unrealistic weight values
+Corrupted sync from a scale or app (e.g. 1.2 kg or 455 kg)
+Discard any entry below 20 kg or above 300 kg. Include count of discarded entries in import summary with note: 'X entries skipped — values out of range.'
+Large import (500+ entries)
+User has years of data in Google Fit
+Show a progress bar or spinner during import. Import in batches of 100. Never show a blank screen during a long operation.
+Google Fit permission revoked externally
+User goes to Google account settings and revokes form.'s access
+Next re-sync attempt returns 401. Show: 'Google Fit access was disconnected. Reconnect in Settings > Google Fit.' Do not auto-retry silently.
+Token expires mid-import
+Import takes long, access token expires during the process
+Detect 401 mid-import, refresh token silently if refresh token is valid. If refresh also fails, stop import, save progress so far, show: 'Import paused — please reconnect Google Fit to continue.'
+Zero weight entries in Google Fit
+User has Google Fit but only logged steps, not weight
+Show: 'No weight entries found in Google Fit. You can log weight manually in form.' Do not show an error — this is a valid state.
+Re-import after previous import
+User triggers sync again when all data already exists
+All entries skipped as duplicates. Show: 'You are up to date — no new entries found.' not 'Import failed.'
+Network drops mid-import
+Connection lost halfway through writing entries to Supabase
+Wrap import in a transaction or track last successfully written entry. On resume or retry, skip already-imported entries by date. Show: 'Import interrupted. X entries saved. Retry to complete.'
+Google Fit has data in lbs display but stores in kg
+User's Google Fit is set to display lbs
+Google Fit API always returns kg regardless of display setting. No conversion needed. This is transparent to form.
+
+9.3 Two-Way Sync Edge Cases
+Edge case
+When it occurs
+Handling
+User edits an existing entry
+User changes a previously logged weight in form.
+Update the corresponding Google Fit entry using the same timestamp. Use PATCH not POST to avoid creating a duplicate.
+User deletes an entry
+User deletes a log entry in form.
+v1.1: Do not delete from Google Fit. Deletion sync is out of scope. Mark entry as deleted in Supabase, leave Google Fit unchanged. Add to open questions for v1.2.
+Entry logged while offline
+No internet when user taps log
+Save to Supabase immediately (offline-first). Queue Google Fit write. Send when connection restored. Show a small 'pending sync' indicator on the entry until confirmed.
+Two-way sync token expired
+Google Fit write token expired, user logs a new entry
+Attempt token refresh silently. If refresh fails, save entry to Supabase, queue Google Fit write, show subtle banner: 'Google Fit sync paused — tap to reconnect.'
+User disables two-way sync mid-session
+User toggles off while entries are queued
+Cancel all pending Google Fit write queue items. Entries already in Google Fit stay there — do not delete. New entries from this point forward are not sent to Google Fit.
+Smart scale writes same-day entry to Google Fit
+Withings or Renpho scale syncs weight on same day user logs in form.
+form.'s write goes to form.'s own data source. Scale's write goes to its own data source. No collision — they coexist independently under separate source IDs.
+User re-enables two-way sync after a gap
+User disabled sync for 2 weeks then re-enables
+Offer retroactive sync for the gap period: 'You have 14 entries not yet in Google Fit. Push them now?' with Yes/No choice.
+
+
+10. Open Questions
+	•	Should the Google Fit sync prompt appear immediately after onboarding, or only after the user has manually logged at least one entry?
+	•	Should deletion sync (removing entries from Google Fit when deleted in form.) be added in v1.2?
+	•	Should we support Google Health Connect (Android 14+) in v1.0 as an alternative to the legacy Fitness API, given Google is pushing migration?
+	•	For the Google Fit token — should it be stored in Supabase (current spec) or in the device keychain only? Keychain is more secure but limits server-side sync in future.
+	•	For the mixed-source import toggle — should it be shown during the initial Google Fit setup flow, or only discoverable in Settings?
+
+
+9. Success Metrics
+9.1 Google Sign-In
+	•	Sign-in completion rate: ≥ 85% of users who tap 'Continue with Google' complete sign-in
+	•	Onboarding drop-off at auth step: < 10%
+
+9.2 Email Sign-Up
+	•	Email verification completion rate: ≥ 70% of users who sign up verify their email within 24 hours
+	•	Sign-up to onboarding start rate: ≥ 80% of verified users begin onboarding immediately
+	•	Password reset completion rate: ≥ 60% of users who request a reset link successfully complete it
+
+9.3 Google Fit Sync
+	•	Opt-in rate: ≥ 40% of users connect Google Fit when prompted post-onboarding
+	•	Sync success rate: ≥ 95% of initiated syncs complete without error
+	•	Re-sync usage: ≥ 20% of connected users trigger at least one manual re-sync within 30 days
+

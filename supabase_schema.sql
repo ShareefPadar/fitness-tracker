@@ -6,6 +6,8 @@ create table if not exists entries (
   weight_kg float8 not null,
   body_fat_pct float8,
   notes text,
+  source text default 'manual',
+  google_fit_synced boolean default false,
   created_at bigint not null
 );
 
@@ -38,7 +40,15 @@ create table if not exists settings (
   age int,
   gender text,
   fitness_goal text,
-  activity_level text
+  activity_level text,
+  onboarding_complete boolean default false,
+  google_fit_connected boolean default false,
+  google_fit_token text,
+  google_fit_last_synced_at timestamptz,
+  google_fit_write_enabled boolean default false,
+  google_fit_write_token text,
+  reminders_enabled boolean default false,
+  reminder_frequency_days int default 3
 );
 
 -- Enable RLS for settings

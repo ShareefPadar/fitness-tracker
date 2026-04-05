@@ -9,6 +9,7 @@ import { History } from './pages/History';
 import { Settings } from './pages/Settings';
 import { Auth } from './pages/Auth';
 import { DatabaseProvider } from './context/DatabaseContext';
+import { NotificationManager } from './components/NotificationManager';
 
 function App() {
   const [session, setSession] = useState<unknown>(null);
@@ -60,6 +61,7 @@ function App() {
 
   return (
     <DatabaseProvider>
+      <NotificationManager />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>

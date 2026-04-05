@@ -21,10 +21,21 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUserEmail(user.email || null);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user) {
+          setUserEmail(session.user.email || null);
           setActiveRole('cheppu');
+          
+          if (session.provider_token) {
+             const currentSettings = await db.settings.get(1);
+             if (currentSettings) {
+                await db.settings.put({
+                   ...currentSettings,
+                   google_fit_connected: true,
+                   google_fit_token: session.provider_token
+                });
+             }
+          }
         } else {
           setUserEmail(null);
           // Only explicit 'guest' if no user
@@ -67,7 +78,15 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           age: localSettings.age,
           gender: localSettings.gender,
           fitness_goal: localSettings.fitness_goal,
-          activity_level: localSettings.activity_level
+          activity_level: localSettings.activity_level,
+          onboarding_complete: localSettings.onboarding_complete,
+          google_fit_connected: localSettings.google_fit_connected,
+          google_fit_token: localSettings.google_fit_token,
+          google_fit_last_synced_at: localSettings.google_fit_last_synced_at,
+          google_fit_write_enabled: localSettings.google_fit_write_enabled,
+          google_fit_write_token: localSettings.google_fit_write_token,
+          reminders_enabled: localSettings.reminders_enabled,
+          reminder_frequency_days: localSettings.reminder_frequency_days
         });
       }
 
@@ -81,6 +100,8 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           weight_kg: e.weight_kg,
           body_fat_pct: e.body_fat_pct,
           notes: e.notes,
+          source: e.source || 'manual',
+          google_fit_synced: e.google_fit_synced || false,
           created_at: e.created_at
         }));
 
@@ -102,6 +123,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useDatabase = () => {
   const context = useContext(DatabaseContext);
   if (!context) throw new Error('useDatabase must be used within a DatabaseProvider');

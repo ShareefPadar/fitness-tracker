@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDatabase } from '../context/DatabaseContext';
-import { Download, Bell, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut } from 'lucide-react';
 import Papa from 'papaparse';
 import { supabase } from '../supabase';
 
@@ -91,15 +91,17 @@ export const Settings: React.FC = () => {
         </div>
       </header>
 
-      <div className="glass-panel text-center mb-6">
-        <SettingsIcon size={32} style={{ margin: '0 auto 16px', color: 'var(--accent-primary)' }} />
-        <h2 className="stat-value" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Profile</h2>
+      <div className="glass-panel mb-6">
+        <div className="text-center mb-6">
+          <SettingsIcon size={32} style={{ margin: '0 auto 16px', color: 'var(--accent-primary)' }} />
+          <h2 className="stat-value" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Profile</h2>
+        </div>
         
-        <div className="input-group text-left mt-6">
+        <div className="input-group mt-6">
           <label className="input-label">Height (cm)</label>
           <input type="number" className="input-field" value={height} onChange={e => setHeight(e.target.value)} placeholder="175" />
         </div>
-        <div className="input-group text-left mt-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: 0 }}>
+        <div className="input-group mt-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: 0 }}>
           <div>
             <label className="input-label">Age</label>
             <input type="number" className="input-field" value={age} onChange={e => setAge(e.target.value)} placeholder="29" />
@@ -114,7 +116,7 @@ export const Settings: React.FC = () => {
           </div>
         </div>
         
-        <div className="input-group text-left mt-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: 0 }}>
+        <div className="input-group mt-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: 0 }}>
           <div>
             <label className="input-label">Goal Weight (kg)</label>
             <input type="number" className="input-field" value={goal} onChange={e => setGoal(e.target.value)} placeholder="70" />
@@ -130,7 +132,7 @@ export const Settings: React.FC = () => {
           </div>
         </div>
         
-        <div className="input-group text-left mt-4">
+        <div className="input-group mt-4">
           <label className="input-label">Activity Level</label>
           <select className="input-field" value={activityLevel} onChange={e => setActivityLevel(e.target.value as 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | '')}>
             <option value="">Select...</option>
@@ -161,30 +163,96 @@ export const Settings: React.FC = () => {
         </button>
       </div>
 
-      <h3 className="mb-4">Data Management</h3>
-      <div className="flex-col gap-4" style={{ display: 'flex' }}>
-        <button className="btn btn-secondary justify-between" onClick={exportCsv} style={{ width: '100%' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Download size={20} /> Export CSV</span>
-        </button>
-      </div>
-
-      <h3 className="mb-4 mt-8">Notifications</h3>
-      <div className="glass-panel items-center justify-between flex" style={{ padding: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Bell color="var(--accent-primary)" size={24} />
-          <div>
-            <p style={{ fontWeight: 600 }}>Soft Reminders</p>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Every 3 days</p>
+      <h3 className="mb-2 mt-6">Sync & Support</h3>
+      <div className="glass-panel" style={{ padding: '0 16px' }}>
+        <div className="setting-row">
+          <div className="setting-info">
+            <span className="setting-title">Google Fit</span>
+            <span className="setting-desc">Connect to sync weight history automatically</span>
           </div>
+          <button 
+            className="btn-ghost" 
+            onClick={async () => {
+               if (isGuest) {
+                 showToast('Connected (Demo Mode)', 'success');
+                 await activeDb.settings.update(1, { google_fit_connected: true, google_fit_token: 'demo-token' });
+                 return;
+               }
+               showToast('Redirecting securely to Google...', 'success');
+               await supabase.auth.signInWithOAuth({
+                 provider: 'google',
+                 options: {
+                   scopes: 'https://www.googleapis.com/auth/fitness.body.read https://www.googleapis.com/auth/fitness.body.write',
+                   queryParams: {
+                     access_type: 'offline',
+                     prompt: 'consent',
+                   }
+                 }
+               });
+            }} 
+            style={{ 
+              border: `1px solid ${settings?.google_fit_connected ? 'var(--success)' : 'var(--glass-border)'}`, 
+              color: settings?.google_fit_connected ? 'var(--success)' : 'var(--text-primary)',
+              borderRadius: '8px', padding: '4px 10px', fontSize: '0.8rem', fontWeight: 600 
+            }}>
+            {settings?.google_fit_connected ? 'Connected' : 'Connect'}
+          </button>
         </div>
-        <button className="btn-ghost" style={{ border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '4px 8px' }}>Edit</button>
+
+        <div className="setting-row">
+          <div className="setting-info">
+            <span className="setting-title">Sync back to Google</span>
+            <span className="setting-desc">Push new entries here to your timeline</span>
+          </div>
+          <label className="toggle-switch">
+             <input type="checkbox" onChange={(e) => showToast(e.target.checked ? 'Sync back enabled' : 'Sync back disabled', 'success')} />
+             <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div className="setting-row">
+          <div className="setting-info">
+            <span className="setting-title">Soft Reminders</span>
+            <span className="setting-desc">
+               {settings?.reminders_enabled ? `Checking every ${settings.reminder_frequency_days}d` : 'Off'}
+            </span>
+          </div>
+          <label className="toggle-switch">
+            <input 
+              type="checkbox" 
+              checked={!!settings?.reminders_enabled}
+              onChange={async (e) => {
+                const isEnabled = e.target.checked;
+                if (isEnabled) {
+                   if (Notification.permission === 'default') await Notification.requestPermission();
+                   if (Notification.permission === 'denied') { 
+                      showToast('Please enable notifications.', 'error');
+                      return;
+                   }
+                }
+                const newSettings = settings ? { ...settings, reminders_enabled: isEnabled, reminder_frequency_days: settings.reminder_frequency_days || 3 } : { id: 1, height_cm: 175, goal_weight_kg: 70, reminders_enabled: isEnabled, reminder_frequency_days: 3 };
+                await activeDb.settings.put(newSettings);
+                showToast(isEnabled ? 'Reminders on' : 'Reminders off', 'success');
+              }} 
+            />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div className="setting-row">
+          <div className="setting-info">
+            <span className="setting-title">Export Log</span>
+            <span className="setting-desc">Download a complete CSV of your entries</span>
+          </div>
+          <button className="btn-ghost" onClick={exportCsv} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '4px 12px', fontSize: '0.75rem' }}>
+            Download
+          </button>
+        </div>
       </div>
 
-
-      <button className="btn btn-secondary" style={{ width: '100%', borderColor: 'var(--glass-border)', marginTop: '32px' }} onClick={handleLogout}>
+      <button className="btn btn-secondary" style={{ width: '100%', borderColor: 'var(--glass-border)', marginTop: '24px' }} onClick={handleLogout}>
         <LogOut size={20} /> Log Out
       </button>
-
     </div>
   );
 };

@@ -41,37 +41,39 @@ export const Measurements: React.FC = () => {
         </div>
       </header>
 
-      <div className="glass-panel text-center mb-6">
-        <Ruler size={32} style={{ margin: '0 auto 16px', color: 'var(--accent-primary)' }} />
-        <h2 className="stat-value" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Log New Sizes</h2>
+      <div className="glass-panel mb-6">
+        <div className="text-center mb-6">
+          <Ruler size={32} style={{ margin: '0 auto 16px', color: 'var(--accent-primary)' }} />
+          <h2 className="stat-value" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Log New Sizes</h2>
+        </div>
         <form onSubmit={handleSave} className="flex-col gap-4 mt-6 text-left" style={{ display: 'flex' }}>
           <div className="input-group">
-            <label className="input-label">Date</label>
-            <input type="date" className="input-field" value={date} onChange={e => setDate(e.target.value)} required />
+            <label className="input-label" style={{ textAlign: 'left' }}>Date</label>
+            <input type="date" className="input-field" max={new Date().toISOString().split('T')[0]} value={date} onChange={e => setDate(e.target.value)} required />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="input-group">
-              <label className="input-label">Waist (cm)</label>
-              <input type="number" step="0.1" className="input-field" placeholder={current?.waist_cm ? String(current.waist_cm) : '0.0'} value={waist} onChange={e => setWaist(e.target.value)} />
+              <label className="input-label" style={{ textAlign: 'left' }}>Waist (cm)</label>
+              <input type="number" step="0.1" min="0" max="300" className="input-field" placeholder={current?.waist_cm ? String(current.waist_cm) : '0.0'} value={waist} onChange={e => setWaist(e.target.value)} />
             </div>
             <div className="input-group">
-              <label className="input-label">Chest (cm)</label>
-              <input type="number" step="0.1" className="input-field" placeholder={current?.chest_cm ? String(current.chest_cm) : '0.0'} value={chest} onChange={e => setChest(e.target.value)} />
+              <label className="input-label" style={{ textAlign: 'left' }}>Chest (cm)</label>
+              <input type="number" step="0.1" min="0" max="300" className="input-field" placeholder={current?.chest_cm ? String(current.chest_cm) : '0.0'} value={chest} onChange={e => setChest(e.target.value)} />
             </div>
             <div className="input-group">
-              <label className="input-label">Hips (cm)</label>
-              <input type="number" step="0.1" className="input-field" placeholder={current?.hips_cm ? String(current.hips_cm) : '0.0'} value={hips} onChange={e => setHips(e.target.value)} />
+              <label className="input-label" style={{ textAlign: 'left' }}>Hips (cm)</label>
+              <input type="number" step="0.1" min="0" max="300" className="input-field" placeholder={current?.hips_cm ? String(current.hips_cm) : '0.0'} value={hips} onChange={e => setHips(e.target.value)} />
             </div>
             <div className="input-group">
-              <label className="input-label">Arms (cm)</label>
-              <input type="number" step="0.1" className="input-field" placeholder={current?.arms_cm ? String(current.arms_cm) : '0.0'} value={arms} onChange={e => setArms(e.target.value)} />
+              <label className="input-label" style={{ textAlign: 'left' }}>Arms (cm)</label>
+              <input type="number" step="0.1" min="0" max="100" className="input-field" placeholder={current?.arms_cm ? String(current.arms_cm) : '0.0'} value={arms} onChange={e => setArms(e.target.value)} />
             </div>
           </div>
           <button type="submit" className="btn btn-primary" style={{ marginTop: '16px' }}>Save Sizes</button>
         </form>
       </div>
 
-      <h3 className="mb-4">Recent History</h3>
+      <h3 className="mb-2">Recent History</h3>
       <div className="flex-col gap-4" style={{ display: 'flex' }}>
         {measurements?.slice(0, 3).map((m) => (
           <div key={m.id} className="glass-panel" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between' }}>

@@ -478,15 +478,15 @@ export const Home: React.FC = () => {
       {/* Quick Log Modal */}
       <BottomSheet isOpen={isLogOpen} onClose={() => setLogOpen(false)} title="Quick Log">
         <form onSubmit={handleSave} className="flex-col gap-4 mt-4" style={{ display: 'flex' }}>
-          <div className="input-group" style={{ marginBottom: 0 }}>
+          <div className="input-group" style={{ marginBottom: 0, textAlign: 'left' }}>
             <label className="input-label">Date</label>
-            <input type="date" className="input-field" value={date} onChange={e => setDate(e.target.value)} required />
+            <input type="date" className="input-field" max={new Date().toISOString().split('T')[0]} value={date} onChange={e => setDate(e.target.value)} required />
           </div>
-          <div className="input-group" style={{ marginBottom: 0 }}>
+          <div className="input-group" style={{ marginBottom: 0, textAlign: 'left' }}>
             <label className="input-label">Weight (kg)</label>
-            <input type="number" step="0.1" className="input-field" placeholder="0.0" value={weightStr} onChange={e => setWeightStr(e.target.value)} required />
+            <input type="number" step="0.1" min="10" max="400" className="input-field" placeholder="0.0" value={weightStr} onChange={e => setWeightStr(e.target.value)} required />
           </div>
-          <div className="input-group">
+          <div className="input-group" style={{ textAlign: 'left' }}>
             <label className="input-label">Notes</label>
             <input type="text" className="input-field" placeholder="How do you feel?" value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
